@@ -211,3 +211,6 @@ outputs/
 
 # Local tooling working directories
 .claude/
+
+# Maintenance utilities kept locally, not part of the delivered repo
+scripts/

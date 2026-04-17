@@ -319,8 +319,6 @@ tennis_fair_value/
 ├── docs/
 │   ├── technical-walkthrough.md
 │   └── ui-screenshot.png
-├── scripts/
-│   └── capture_ui.py   # Playwright-driven README screenshot (maintenance utility)
 ├── outputs/          # Generated CSVs (git-ignored)
 ├── requirements.txt
 └── README.md

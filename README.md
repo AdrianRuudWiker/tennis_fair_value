@@ -2,6 +2,8 @@
 
 A Markov-chain fair-value model for live best-of-3 tennis matches. It takes the pre-match betting line as an anchor, walks the first set game-by-game, and tells you where the *fair* match-win probability should sit at each key state — so you can compare against the live market and spot when retail money has pushed the price away from fundamentals.
 
+![Streamlit UI — canonical first-set table + live score lookup + match-win chart](docs/ui-screenshot.png)
+
 ---
 
 ## Quick start
@@ -20,6 +22,32 @@ pytest tests/                   # run the 17 property tests
 ```
 
 The Streamlit app opens in your browser; the sidebar has every input, the canonical first-set table updates live, and there's a per-score lookup panel at the bottom.
+
+---
+
+## Terminology
+
+Short reference so the rest of the README reads cleanly. Skip if you know these.
+
+**Tennis**
+- **Hold (of serve)** — winning a game you served. "**Hold rate**" = fraction of service games you win over time.
+- **Break (of serve)** — winning a game your opponent served. "Up/down N breaks" = N net breaks ahead/behind.
+- **Tiebreak** — the mini-game played at 6-6 to decide the set.
+- **ATP / WTA** — the men's and women's professional tennis tours.
+
+**Betting**
+- **Decimal odds** — price format where `1.53` means a $1 bet returns $1.53 total. Implied probability = `1 / decimal`.
+- **Overround / vig** — the bookmaker's built-in margin. When the two sides' implied probabilities sum to more than 100 %, the excess is the overround. "**De-vig**" means removing it to recover a fair two-sided probability.
+- **Sharp money vs fan money (retail money)** — professional / informed bettors vs casual / emotion-driven bettors. Sharp money dominates pre-match lines on low-margin books; fan money dominates live markets on retail venues.
+- **Fair value** — the "correct" probability or price, absent bias, noise, or book margin.
+- **Edge** — the gap between the model's fair probability and the market's offered probability. A positive edge means the market is mispriced in your favour.
+- **Pinnacle** — a sportsbook famous for sharp, low-margin lines; widely used as the efficient-market reference.
+
+**Model / code**
+- **Markov chain** — a state-based model where each next-state probability depends only on the current state, not the history. Here: game scores and who serves next.
+- **Memoise** — cache a function's result keyed on its inputs so repeated calls are free.
+- **Anchoring** — locking the absolute level to an external number (the pre-match odds) and using the model only to compute the *shift* from that anchor.
+- **fav / und** — short for "favourite" / "underdog" throughout the code and UI.
 
 ---
 
@@ -288,6 +316,11 @@ tennis_fair_value/
 ├── tests/
 │   ├── conftest.py
 │   └── test_sanity.py
+├── docs/
+│   ├── technical-walkthrough.md
+│   └── ui-screenshot.png
+├── scripts/
+│   └── capture_ui.py   # Playwright-driven README screenshot (maintenance utility)
 ├── outputs/          # Generated CSVs (git-ignored)
 ├── requirements.txt
 └── README.md

@@ -50,13 +50,13 @@ def anchored_match_win(fav_hold, und_hold, state, first_server, prematch_odds):
     return p_set, prematch_odds + (raw_live - raw_pre)
 
 
-def color_delta(val):
-    """Green for positive, red for negative, grey for blank."""
-    if pd.isna(val):
+def color_delta_str(val):
+    """Green for leading '+', red for leading '-', grey for the em-dash placeholder."""
+    if val == "—":
         return "color: #888"
-    if val > 0:
+    if val.startswith("+"):
         return "color: #0a7d2f; font-weight: 600"
-    if val < 0:
+    if val.startswith("-"):
         return "color: #c0392b; font-weight: 600"
     return ""
 
@@ -138,40 +138,26 @@ top_d.metric("Und hold", f"{und_hold:.1%}")
 
 results = run_model(fav_hold, und_hold, prematch_odds, first_server)
 
-num_df = pd.DataFrame([
+display_df = pd.DataFrame([
     {
         "Match State":       r["state"],
-        "Set Win %":         r["set_win"],
-        "Match Win % (fav)": r["match_win_fav"],
-        "Delta Match":       r["delta_match"],
-    }
-    for r in results
-])
-
-st.subheader("Canonical first-set states")
-
-styled = (
-    num_df.style
-    .format({
-        "Set Win %":         lambda v: "—" if pd.isna(v) else f"{v:.1%}",
-        "Match Win % (fav)": "{:.1%}",
-        "Delta Match":       lambda v: "—" if pd.isna(v) else f"{v:+.1%}",
-    })
-    .map(color_delta, subset=["Delta Match"])
-)
-st.dataframe(styled, hide_index=True, width="stretch")
-
-# Copy-for-Sheets block — identical formatting to the visible table.
-display_rows = [
-    {
-        "Match State":       r["state"],
-        "Set Win %":         "—" if r["set_win"] is None else f"{r['set_win']:.1%}",
+        "Set Win %":         "—" if r["set_win"]     is None else f"{r['set_win']:.1%}",
         "Match Win % (fav)": f"{r['match_win_fav']:.1%}",
         "Delta Match":       "—" if r["delta_match"] is None else f"{r['delta_match']:+.1%}",
     }
     for r in results
-]
-tsv = pd.DataFrame(display_rows).to_csv(sep="\t", index=False)
+])
+
+# Kept separately for the downstream bar chart — numeric values, per-state.
+chart_values = {r["state"]: r["match_win_fav"] for r in results}
+
+st.subheader("Canonical first-set states")
+
+styled = display_df.style.map(color_delta_str, subset=["Delta Match"])
+st.dataframe(styled, hide_index=True, width="stretch")
+
+# Copy-for-Sheets block — re-uses the same formatted DataFrame shown above.
+tsv = display_df.to_csv(sep="\t", index=False)
 with st.expander("📋 Copy-for-Sheets (tab-separated — paste into the template)"):
     st.code(tsv, language="text")
 
@@ -243,5 +229,5 @@ else:
 
 st.divider()
 st.subheader("Match win % by first-set state")
-chart_df = num_df.set_index("Match State")[["Match Win % (fav)"]]
+chart_df = pd.DataFrame.from_dict(chart_values, orient="index", columns=["Match Win % (fav)"])
 st.bar_chart(chart_df, width="stretch", horizontal=True)

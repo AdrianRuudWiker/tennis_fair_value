@@ -250,6 +250,12 @@ Running list of ideas that would make the model *more correct*, not just more fe
 
 ---
 
+## Further reading
+
+- [`docs/technical-walkthrough.md`](docs/technical-walkthrough.md) — plain-English tour of the code, layer by layer, with the five transferable patterns.
+
+---
+
 ## Project structure
 
 ```

@@ -42,11 +42,11 @@ def test_equal_holds_set_win_50pct(h):
 # ---------------------------------------------------------------------------
 
 def test_prematch_row_anchored_to_site_odds():
-    """The pre-match row match_win_a must equal prematch_odds exactly."""
+    """The pre-match row match_win_fav must equal prematch_odds exactly."""
     for odds in (0.50, 0.60, 0.64, 0.75):
         rows = _rows(prematch_odds=odds)
-        assert abs(rows[0]["match_win_a"] - odds) < TOLERANCE, (
-            f"Pre-match row should show {odds:.2f}, got {rows[0]['match_win_a']:.6f}"
+        assert abs(rows[0]["match_win_fav"] - odds) < TOLERANCE, (
+            f"Pre-match row should show {odds:.2f}, got {rows[0]['match_win_fav']:.6f}"
         )
 
 
@@ -126,27 +126,13 @@ def test_mirror_symmetry_equal_holds(h):
 
 
 # ---------------------------------------------------------------------------
-# 6. Match A + Match B = 100 % on every row
-# ---------------------------------------------------------------------------
-
-def test_match_ab_sum_to_one():
-    """Every row in the results table must have match_a + match_b == 1.0."""
-    rows = _rows()
-    for r in rows:
-        total = r["match_win_a"] + r["match_win_b"]
-        assert abs(total - 1.0) < TOLERANCE, (
-            f"Row '{r['state']}': match_a + match_b = {total:.8f} (not 1.0)"
-        )
-
-
-# ---------------------------------------------------------------------------
-# 7. Site-anchoring: match_win_a = prematch_odds + model_shift
+# 6. Site-anchoring: match_win_fav = prematch_odds + model_shift
 # ---------------------------------------------------------------------------
 
 def test_site_anchoring_is_correct():
     """
     For each non-pre-match row:
-      match_win_a == prematch_odds + (model_at_state - model_pre_match)
+      match_win_fav == prematch_odds + (model_at_state - model_pre_match)
     """
     fav_hold, und_hold, prematch_odds = 0.68, 0.62, 0.64
 
@@ -164,15 +150,15 @@ def test_site_anchoring_is_correct():
     states_to_game_states = {
         "Fav up 1 break":    (1, 0, "und"),
         "Fav down 1 break":  (0, 1, "fav"),
-        "Fav up 2 breaks":   (2, 0, "fav"),
-        "Fav down 2 breaks": (0, 2, "und"),
+        "Fav up 2 breaks":   (2, 0, "und"),
+        "Fav down 2 breaks": (0, 2, "fav"),
     }
 
     for r in rows[1:5]:  # mid-set rows only
         state = states_to_game_states[r["state"]]
         expected = prematch_odds + (raw_match(state) - model_pre)
-        assert abs(r["match_win_a"] - expected) < TOLERANCE, (
-            f"Row '{r['state']}': match_win_a={r['match_win_a']:.6f}, "
+        assert abs(r["match_win_fav"] - expected) < TOLERANCE, (
+            f"Row '{r['state']}': match_win_fav={r['match_win_fav']:.6f}, "
             f"expected={expected:.6f}"
         )
 
@@ -202,15 +188,15 @@ def test_extreme_favourite_no_crash():
 
 
 # ---------------------------------------------------------------------------
-# 9. delta_match identity: delta_match == match_win_a - prematch_odds
+# 9. delta_match identity: delta_match == match_win_fav - prematch_odds
 # ---------------------------------------------------------------------------
 
 def test_delta_match_equals_anchored_shift():
-    """For every non-pre-match row, delta_match must equal match_win_a - prematch_odds."""
+    """For every non-pre-match row, delta_match must equal match_win_fav - prematch_odds."""
     odds = 0.64
     rows = _rows(prematch_odds=odds)
     for r in rows[1:]:  # skip the pre-match anchor row
-        expected = r["match_win_a"] - odds
+        expected = r["match_win_fav"] - odds
         assert abs(r["delta_match"] - expected) < TOLERANCE, (
             f"Row '{r['state']}': delta_match={r['delta_match']:.6f}, "
             f"expected={expected:.6f}"

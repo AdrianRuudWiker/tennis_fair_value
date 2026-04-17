@@ -37,7 +37,7 @@ For each first-set game state below, the model outputs the favourite's **set win
 
 5. **Site-anchoring**: the betting site's pre-match price is the absolute level; the model only contributes the *shift*:
    ```
-   match_win_a(state) = prematch_odds + (model_at_state - model_pre_match)
+   match_win_fav(state) = prematch_odds + (model_at_state - model_pre_match)
    ```
    This keeps the model honest about levels (the market prices dozens of match-specific factors the model does not) while using the Markov chain purely for relative motion.
 
@@ -83,18 +83,18 @@ python main.py --live          # interactive score-by-score mode
 ## Output table
 
 ```
-Match State            Set Win%(A)  Match Win%(A)  Match Win%(B)  Delta Match
------------------------------------------------------------------------------
-Pre-match (0-0)              58.9%          64.0%          36.0%           --
-Fav up 1 break               63.7%          66.3%          33.7%        +2.3%
-Fav down 1 break             53.2%          61.2%          38.8%        -2.8%
-Fav up 2 breaks              86.1%          77.2%          22.8%       +13.2%
-Fav down 2 breaks            25.1%          47.6%          52.4%       -16.4%
-Fav WINS 1st set                --          83.9%          16.1%       +19.9%
-Fav LOSES 1st set               --          35.5%          64.5%       -28.5%
+Match State             Set Win%   Match Win% (fav)   Delta Match
+-----------------------------------------------------------------
+Pre-match (0-0)            58.9%              64.0%            --
+Fav up 1 break             63.7%              66.3%         +2.3%
+Fav down 1 break           53.2%              61.2%         -2.8%
+Fav up 2 breaks            86.1%              77.2%        +13.2%
+Fav down 2 breaks          25.1%              47.6%        -16.4%
+Fav WINS 1st set              --              83.9%        +19.9%
+Fav LOSES 1st set             --              35.5%        -28.5%
 ```
 
-**Using Delta Match for edges**: if the table says `Match A = 66.3 %` (+2.3 %) at up-1-break but the live odds imply 61 %, that gap is a potential edge on the favourite. The column order mirrors the Google Sheets template so rows can be pasted directly.
+**Using Delta Match for edges**: if the table says `Match Win % (fav) = 66.3 %` (+2.3 %) at up-1-break but the live odds imply 61 %, that gap is a potential edge on the favourite. The column order mirrors the Google Sheets template so rows can be pasted directly.
 
 A CSV is written to `outputs/` with a `#` metadata header (surface, gender, hold rates, anchor, timestamp) followed by the table.
 
@@ -133,9 +133,8 @@ Enter `fav_games und_games server [optional live_odds]`. Terminal scores (e.g. `
 | Up-break states > neutral; down-break states < neutral | `test_{up,down}_states_above/below_neutral_set_win` |
 | Delta ordering: `won > up2 > up1 > 0 > down1 > down2 > lost` | `test_delta_match_signs_and_ordering` |
 | Mirror symmetry with equal holds: `P(up 1 break) + P(down 1 break) = 1` | `test_mirror_symmetry_equal_holds` |
-| Match A + Match B = 100 % on every row | `test_match_ab_sum_to_one` |
 | Anchoring identity holds for every row | `test_site_anchoring_is_correct` |
-| `delta_match` == `match_win_a − prematch_odds` | `test_delta_match_equals_anchored_shift` |
+| `delta_match` == `match_win_fav − prematch_odds` | `test_delta_match_equals_anchored_shift` |
 | Extreme hold rates (0, 1, 0.99/0.01) do not crash | `test_{zero,unit}_hold_rates_no_crash`, `test_extreme_favourite_no_crash` |
 
 Run locally with:

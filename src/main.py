@@ -124,12 +124,12 @@ def run_model(fav_hold, und_hold, prematch_odds, first_server="fav"):
         """Shift model's match win by the same amount from the site's anchor."""
         return prematch_odds + (p_match_model - p_match_model_pre)
 
-    # Canonical first-set states per supervisor's spec:
+    # Canonical first-set state layout for the output table:
     #   "up K breaks"   -> (K, 0, opponent-of-first-server)
     #   "down K breaks" -> (0, K, first-server)
     # When fav_games+und_games is even the set-win probability is server-invariant,
-    # so the 2-break rows land on the same number either way — but we follow the
-    # spec literally so the state labels match the Google Sheets template.
+    # so the 2-break rows land on the same number regardless of server choice;
+    # we still follow this convention so every row has a consistent pattern.
     mid_set_states = {
         "Pre-match (0-0)":   (0, 0, first_server),
         "Fav up 1 break":    (1, 0, _other(first_server)),
@@ -183,7 +183,7 @@ def run_model(fav_hold, und_hold, prematch_odds, first_server="fav"):
 
 def print_results(results, fav_hold, und_hold, surface, gender,
                   prematch_odds, first_server):
-    """Print formatted output table matching the supervisor's layout."""
+    """Print the formatted output table (same column order as the CSV export)."""
     model_pre = results[0]["set_win"]
 
     print()
@@ -303,7 +303,7 @@ def export_csv(results, surface, gender, fav_hold, und_hold,
                prematch_odds, first_server):
     """
     Export the results table to a timestamped CSV in the outputs/ directory.
-    Column layout matches the supervisor's Google Sheets template.
+    Column layout is designed to paste directly into the target Google Sheets workflow.
     """
     outputs_dir = os.path.join(os.path.dirname(__file__), "..", "outputs")
     os.makedirs(outputs_dir, exist_ok=True)

@@ -104,7 +104,7 @@ Whether you *act* on that gap is a separate decision — model risk, liquidity, 
 
 ## How to run
 
-### Streamlit app (recommended for live use and supervisor demos)
+### Streamlit app (recommended for live use and demos)
 ```bash
 pip install -r requirements.txt
 streamlit run src/app.py
@@ -178,7 +178,7 @@ The Streamlit app has the same lookup with auto-de-vig on both sides, plus a sig
 |---|---|
 | **Best-of-3 only** | Covers most ATP/WTA regular-season matches. Bo5 is a one-line extension; deferred for scope. |
 | **Favourite serves first** (default) | Spec assumption; avoids blocking on the coin-toss result. Override in the app if needed. |
-| **Canonical `(0, 1, fav)` for "down 1 break"** | The true "just broken" state is `(0, 1, und)`, which is strictly worse. Supervisor's spec chose the canonical form for simplicity. Trade-off: on high-hold surfaces (grass, fast hard) the table *understates* the sting of an early break — flagged, not hidden. |
+| **Canonical `(0, 1, fav)` for "down 1 break"** | v1 uses the canonical form to keep the table compact and the Markov recursion state-history-free. The true "just broken" state is `(0, 1, und)` — strictly worse probabilistically but requires tracking exact in-set history. Trade-off: on high-hold surfaces (grass, fast hard) the table *understates* the sting of an early break. Flagged, not hidden. |
 | **Hold rates constant through the match** | No momentum, fatigue, or pressure adjustment. Second-order effects we leave on the table for v2. |
 | **Tiebreak = `fav_hold / (fav_hold + und_hold)`** | A point-by-point tiebreak chain changes the number by ~1–2 %. The approximation is tight enough for edge-spotting and keeps the model one-file-simple. |
 | **Sets 2 and 3 reset to neutral** | No set-to-set momentum. Slightly undersells the match-level consequence of winning/losing the first set — conservative. |
@@ -208,16 +208,16 @@ pytest tests/ -v
 
 ## Google Sheets workflow
 
-1. In the Streamlit app, expand the **📋 Copy-for-Sheets** block and copy the TSV. Paste directly into the supervisor's template.
+1. In the Streamlit app, expand the **📋 Copy-for-Sheets** block and copy the TSV. Paste directly into the target Sheets template.
 2. Or, after a CLI run, open the generated `outputs/*.csv` — the `#`-prefixed metadata rows are at the top, the table below.
 
 ---
 
-## What's *not* in v1 (honest gaps to raise with the supervisor)
+## Known gaps in v1 (tracked deliberately, not overlooked)
 
-- **No data-source integration.** Hold rates are typed by hand from tennisabstract.com. The full pipeline (`data source → Python engine`) isn't automated.
-- **Per-player × per-surface hold profiles are not first-class inputs.** The app takes the two holds *for the currently selected surface*, not a full 4-surface profile for each player. Adding that is ~20 lines of form.
-- **Sheets template alignment is a guess.** Column order / headers / any metadata rows match what we inferred — should be cross-checked against the actual template before the review.
+- **No data-source integration.** Hold rates are typed by hand from tennisabstract.com. Automating `data source → Python engine` is a v2 priority — see the Whiteboard.
+- **Per-player × per-surface hold profiles are not first-class inputs.** The app takes the two holds *for the currently selected surface*, not a full 4-surface profile per player. Adding that is ~20 lines of form; deferred because v1's goal was the model, not the data-entry ergonomics.
+- **Output column layout is my own choice.** Column order and headers reflect what I judged to fit the Sheets workflow; easy to reconcile against any canonical layout if one is supplied later.
 
 ---
 

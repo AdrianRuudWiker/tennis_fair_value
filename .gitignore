@@ -208,3 +208,6 @@ __marimo__/
 
 # Project-generated CSV runs
 outputs/
+
+# Local tooling working directories
+.claude/

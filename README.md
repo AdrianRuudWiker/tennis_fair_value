@@ -4,6 +4,25 @@ A Markov-chain fair-value model for live best-of-3 tennis matches. It takes the 
 
 ---
 
+## Quick start
+
+Requires **Python 3.10+**.
+
+```bash
+git clone https://github.com/AdrianRuudWiker/tennis_fair_value.git
+cd tennis_fair_value
+python -m venv venv
+venv\Scripts\activate          # Windows  (macOS/Linux: source venv/bin/activate)
+pip install -r requirements.txt
+
+streamlit run src/app.py        # open the web UI
+pytest tests/                   # run the 17 property tests
+```
+
+The Streamlit app opens in your browser; the sidebar has every input, the canonical first-set table updates live, and there's a per-score lookup panel at the bottom.
+
+---
+
 ## The problem it solves
 
 **Pre-match markets are efficient. In-match markets are not.**

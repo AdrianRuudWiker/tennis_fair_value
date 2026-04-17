@@ -59,6 +59,8 @@ def match_win_from_set_score(sets_fav, sets_und, p_set):
     if sets_fav == 1 and sets_und == 1:
         return p_set
 
+    raise ValueError(f"Invalid set score: ({sets_fav}, {sets_und})")
+
 
 # Quick tests
 if __name__ == "__main__":

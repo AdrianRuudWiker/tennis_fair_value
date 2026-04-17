@@ -37,7 +37,8 @@ def set_win_probability(fav_hold, und_hold, state):
 
         # Special case: tiebreak at 6-6 (v1 approximation)
         if fav == 6 and und == 6:
-            p_fav_wins_tb = fav_hold / (fav_hold + und_hold)
+            total = fav_hold + und_hold
+            p_fav_wins_tb = (fav_hold / total) if total > 0 else 0.5
             cache[s] = p_fav_wins_tb
             return p_fav_wins_tb
 

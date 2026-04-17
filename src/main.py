@@ -19,6 +19,7 @@ import pandas as pd
 
 from markov import set_win_probability
 from match import match_win_from_set_score
+from states import is_terminal
 
 
 # ---- SURFACE OPTIONS ----
@@ -123,52 +124,61 @@ def run_model(fav_hold, und_hold, prematch_odds, first_server="fav"):
         """Shift model's match win by the same amount from the site's anchor."""
         return prematch_odds + (p_match_model - p_match_model_pre)
 
-    # Mid-set states. Break states reflect serve alternation from first_server.
+    # Canonical first-set states per supervisor's spec:
+    #   "up K breaks"   -> (K, 0, opponent-of-first-server)
+    #   "down K breaks" -> (0, K, first-server)
+    # When fav_games+und_games is even the set-win probability is server-invariant,
+    # so the 2-break rows land on the same number either way — but we follow the
+    # spec literally so the state labels match the Google Sheets template.
     mid_set_states = {
         "Pre-match (0-0)":   (0, 0, first_server),
         "Fav up 1 break":    (1, 0, _other(first_server)),
         "Fav down 1 break":  (0, 1, first_server),
-        "Fav up 2 breaks":   (2, 0, first_server),
-        "Fav down 2 breaks": (0, 2, _other(first_server)),
+        "Fav up 2 breaks":   (2, 0, _other(first_server)),
+        "Fav down 2 breaks": (0, 2, first_server),
     }
 
+    # Delta is measured at the MATCH level: how much the favourite's match-win
+    # probability shifts from its pre-match anchor as the first set unfolds.
+    # Because match_win_a = prematch_odds + (model_at_state - model_pre),
+    # (match_win_a - prematch_odds) is identical to the model's own shift.
     results = []
     for label, state in mid_set_states.items():
         p_set, p_match_model = model_match_win(state)
 
         if label == "Pre-match (0-0)":
-            # Pre-match row: show site's odds directly, delta is n/a.
-            delta_set  = None
             match_win_a = prematch_odds
+            delta_match = None  # pre-match IS the anchor
         else:
-            delta_set   = p_set - p_set_neutral
             match_win_a = anchored(p_match_model)
+            delta_match = match_win_a - prematch_odds
 
         results.append({
             "state":       label,
             "set_win":     p_set,
-            "delta_set":   delta_set,
             "match_win_a": match_win_a,
             "match_win_b": 1 - match_win_a,
+            "delta_match": delta_match,
         })
 
-    # Won / lost first set — set is over so set_win and delta_set are n/a.
+    # Won / lost first set — set is over so set_win is n/a, but delta_match is
+    # well-defined and in fact the largest magnitude in the table.
     match_win_won  = anchored(p_match_if_win_set)
     match_win_lost = anchored(p_match_if_lose_set)
 
     results.append({
         "state":       "Fav WINS 1st set",
         "set_win":     None,
-        "delta_set":   None,
         "match_win_a": match_win_won,
         "match_win_b": 1 - match_win_won,
+        "delta_match": match_win_won - prematch_odds,
     })
     results.append({
         "state":       "Fav LOSES 1st set",
         "set_win":     None,
-        "delta_set":   None,
         "match_win_a": match_win_lost,
         "match_win_b": 1 - match_win_lost,
+        "delta_match": match_win_lost - prematch_odds,
     })
 
     return results
@@ -191,15 +201,15 @@ def print_results(results, fav_hold, und_hold, surface, gender,
     print(f"  Model set win:    {model_pre:.1%} (neutral 0-0 set win from hold rates)")
     print("=" * 75)
     print()
-    print(f"  {'Match State':<22} {'Set Win%(A)':>11} {'Delta Set':>10} "
-          f"{'Match Win%(A)':>14} {'Match Win%(B)':>14}")
-    print("  " + "-" * 73)
+    print(f"  {'Match State':<22} {'Set Win%(A)':>11} "
+          f"{'Match Win%(A)':>14} {'Match Win%(B)':>14} {'Delta Match':>12}")
+    print("  " + "-" * 77)
 
     for r in results:
-        set_str   = f"{r['set_win']:.1%}"  if r["set_win"]   is not None else "--"
-        dset_str  = f"{r['delta_set']:+.1%}" if r["delta_set"] is not None else "--"
-        print(f"  {r['state']:<22} {set_str:>11} {dset_str:>10} "
-              f"{r['match_win_a']:>14.1%} {r['match_win_b']:>14.1%}")
+        set_str   = f"{r['set_win']:.1%}"       if r["set_win"]     is not None else "--"
+        dmatch_str = f"{r['delta_match']:+.1%}" if r["delta_match"] is not None else "--"
+        print(f"  {r['state']:<22} {set_str:>11} "
+              f"{r['match_win_a']:>14.1%} {r['match_win_b']:>14.1%} {dmatch_str:>12}")
 
     print()
 
@@ -268,21 +278,28 @@ def live_mode(fav_hold, und_hold, surface, gender, first_server, prematch_odds):
             print("  Game counts must be 0-7")
             continue
 
-        p_set = set_win_probability(fav_hold, und_hold, (fav_g, und_g, server))
+        state = (fav_g, und_g, server)
+        if is_terminal(state):
+            print(f"  {fav_g}-{und_g} is a completed set; use 1st-set result "
+                  f"rows from the main table instead.")
+            continue
+
+        p_set = set_win_probability(fav_hold, und_hold, state)
         p_match_model = (
             p_set         * p_match_if_win_set
             + (1 - p_set) * p_match_if_lose_set
         )
         p_match = prematch_odds + (p_match_model - p_match_model_pre)
-        delta_set = p_set - p_set_neutral
+        delta_match = p_match - prematch_odds
 
         edge_str = ""
         if live_odds_a is not None:
             edge_str = f"   edge: {p_match - live_odds_a:+.1%}"
 
         print(f"  {fav_g}-{und_g} {server} srv  |  "
-              f"set: {p_set:.1%} ({delta_set:+.1%})  "
-              f"match A: {p_match:.1%}  match B: {1 - p_match:.1%}{edge_str}")
+              f"set: {p_set:.1%}  "
+              f"match A: {p_match:.1%} ({delta_match:+.1%})  "
+              f"match B: {1 - p_match:.1%}{edge_str}")
 
 
 def export_csv(results, surface, gender, fav_hold, und_hold,
@@ -304,10 +321,10 @@ def export_csv(results, surface, gender, fav_hold, und_hold,
     for r in results:
         rows.append({
             "Match State":    r["state"],
-            "Set Win % (A)":  f"{r['set_win']:.1%}"   if r["set_win"]   is not None else "--",
-            "Delta Set Win":  f"{r['delta_set']:+.1%}" if r["delta_set"] is not None else "--",
+            "Set Win % (A)":  f"{r['set_win']:.1%}"       if r["set_win"]     is not None else "--",
             "Match Win % (A)": f"{r['match_win_a']:.1%}",
             "Match Win % (B)": f"{r['match_win_b']:.1%}",
+            "Delta Match":    f"{r['delta_match']:+.1%}" if r["delta_match"] is not None else "--",
         })
 
     df = pd.DataFrame(rows)
@@ -328,12 +345,26 @@ def export_csv(results, surface, gender, fav_hold, und_hold,
     return filepath
 
 
+def prompt_prematch_odds():
+    """Read prematch odds from stdin with a retry loop on bad input."""
+    while True:
+        raw = input("  Betting-site pre-match odds for favourite (e.g. 0.64): ").strip()
+        try:
+            odds = float(raw)
+        except ValueError:
+            print(f"  '{raw}' is not a number. Enter a decimal like 0.64.")
+            continue
+        if not (0.0 < odds < 1.0):
+            print(f"  Odds must be between 0 and 1 (exclusive). Got {odds}.")
+            continue
+        return odds
+
+
 if __name__ == "__main__":
     fav_hold = FAV_HOLD_RATES[SURFACE]
     und_hold = UND_HOLD_RATES[SURFACE]
 
-    raw = input("  Betting-site pre-match odds for favourite (e.g. 0.64): ").strip()
-    prematch_odds = float(raw)
+    prematch_odds = prompt_prematch_odds()
 
     validate_inputs(fav_hold, und_hold, SURFACE, GENDER, prematch_odds, FIRST_SERVER)
 

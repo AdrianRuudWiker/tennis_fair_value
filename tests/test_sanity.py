@@ -50,10 +50,10 @@ def test_prematch_row_anchored_to_site_odds():
         )
 
 
-def test_prematch_row_delta_set_is_none():
-    """Pre-match row has no delta_set (it IS the neutral state)."""
+def test_prematch_row_delta_match_is_none():
+    """Pre-match row has no delta_match (it IS the anchor)."""
     rows = _rows()
-    assert rows[0]["delta_set"] is None
+    assert rows[0]["delta_match"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -85,17 +85,25 @@ def test_down_states_below_neutral_set_win():
 
 
 # ---------------------------------------------------------------------------
-# 4. delta_set is positive for up states, negative for down states
+# 4. delta_match is positive for up states, negative for down states, and
+#    monotone: 2br > 1br > 0 > -1br > -2br. Also holds for set-result rows.
 # ---------------------------------------------------------------------------
 
-def test_delta_set_signs():
-    """delta_set > 0 for break-up states, < 0 for break-down states."""
+def test_delta_match_signs_and_ordering():
+    """delta_match must be ordered: won > up2 > up1 > 0 > down1 > down2 > lost."""
     rows = {r["state"]: r for r in _rows()}
 
-    assert rows["Fav up 1 break"]["delta_set"]    > 0
-    assert rows["Fav up 2 breaks"]["delta_set"]   > 0
-    assert rows["Fav down 1 break"]["delta_set"]  < 0
-    assert rows["Fav down 2 breaks"]["delta_set"] < 0
+    d_up1    = rows["Fav up 1 break"]["delta_match"]
+    d_up2    = rows["Fav up 2 breaks"]["delta_match"]
+    d_down1  = rows["Fav down 1 break"]["delta_match"]
+    d_down2  = rows["Fav down 2 breaks"]["delta_match"]
+    d_won    = rows["Fav WINS 1st set"]["delta_match"]
+    d_lost   = rows["Fav LOSES 1st set"]["delta_match"]
+
+    assert d_won > d_up2 > d_up1 > 0 > d_down1 > d_down2 > d_lost, (
+        f"Ordering broken: won={d_won:.4f} up2={d_up2:.4f} up1={d_up1:.4f} "
+        f"down1={d_down1:.4f} down2={d_down2:.4f} lost={d_lost:.4f}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -191,3 +199,19 @@ def test_extreme_favourite_no_crash():
     """Near-certain favourite should return a high probability without crashing."""
     p = set_win_probability(0.99, 0.01, (0, 0, "fav"))
     assert 0.9 < p <= 1.0, f"Expected p near 1.0, got {p}"
+
+
+# ---------------------------------------------------------------------------
+# 9. delta_match identity: delta_match == match_win_a - prematch_odds
+# ---------------------------------------------------------------------------
+
+def test_delta_match_equals_anchored_shift():
+    """For every non-pre-match row, delta_match must equal match_win_a - prematch_odds."""
+    odds = 0.64
+    rows = _rows(prematch_odds=odds)
+    for r in rows[1:]:  # skip the pre-match anchor row
+        expected = r["match_win_a"] - odds
+        assert abs(r["delta_match"] - expected) < TOLERANCE, (
+            f"Row '{r['state']}': delta_match={r['delta_match']:.6f}, "
+            f"expected={expected:.6f}"
+        )
